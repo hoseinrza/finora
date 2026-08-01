@@ -55,7 +55,7 @@ abstract class FinoraDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .openHelperFactory(factory)
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration(dropAllTables = true)
                     .addCallback(DatabaseCallback(context))
                     .build()
                 INSTANCE = instance
