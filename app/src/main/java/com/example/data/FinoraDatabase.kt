@@ -6,9 +6,12 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.security.DatabasePassphraseProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import net.sqlcipher.database.SQLiteDatabase as SqlCipherDatabase
+import net.sqlcipher.database.SupportFactory
 
 @Database(
     entities = [
@@ -34,13 +37,24 @@ abstract class FinoraDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: FinoraDatabase? = null
 
+        // Renamed from the original "finora_database": SQLCipher can't open a file that was
+        // created as a plain SQLite DB (wrong file format, not a Room migration concern), so the
+        // encrypted database intentionally lives in a new file. See
+        // docs/DATABASE_ENCRYPTION_MIGRATION.md for the full rationale and rollout notes.
+        private const val DATABASE_NAME = "finora_database_encrypted.db"
+
         fun getDatabase(context: Context): FinoraDatabase {
             return INSTANCE ?: synchronized(this) {
+                SqlCipherDatabase.loadLibs(context)
+                val passphrase = DatabasePassphraseProvider.getOrCreatePassphrase(context)
+                val factory = SupportFactory(passphrase)
+
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     FinoraDatabase::class.java,
-                    "finora_database"
+                    DATABASE_NAME
                 )
+                    .openHelperFactory(factory)
                     .fallbackToDestructiveMigration()
                     .addCallback(DatabaseCallback(context))
                     .build()

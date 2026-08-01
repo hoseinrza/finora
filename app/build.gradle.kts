@@ -7,6 +7,7 @@ plugins {
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
   alias(libs.plugins.google.services)
+  alias(libs.plugins.firebase.crashlytics.plugin)
 }
 
 android {
@@ -23,13 +24,30 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
+  // Release signing is sourced ONLY from environment variables (CI secrets / local shell env).
+  // No keystore path defaults to a file in the repo, and no passwords are ever hardcoded here.
+  // Required when assembling/bundling a release build:
+  //   KEYSTORE_PATH     - absolute path to the upload keystore (decoded from a CI secret; never committed)
+  //   KEYSTORE_PASSWORD - store password
+  //   KEY_ALIAS         - key alias inside the keystore
+  //   KEY_PASSWORD      - key password
+  val releaseKeystorePath = System.getenv("KEYSTORE_PATH")
+  val releaseStorePassword = System.getenv("KEYSTORE_PASSWORD")
+  val releaseKeyAlias = System.getenv("KEY_ALIAS")
+  val releaseKeyPassword = System.getenv("KEY_PASSWORD")
+  val hasReleaseSigningEnv = !releaseKeystorePath.isNullOrBlank() &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank()
+
   signingConfigs {
-    create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
+    if (hasReleaseSigningEnv) {
+      create("release") {
+        storeFile = file(releaseKeystorePath!!)
+        storePassword = releaseStorePassword
+        keyAlias = releaseKeyAlias
+        keyPassword = releaseKeyPassword
+      }
     }
     create("debugConfig") {
       storeFile = file("${rootDir}/debug.keystore")
@@ -41,10 +59,21 @@ android {
 
   buildTypes {
     release {
-      isCrunchPngs = false
-      isMinifyEnabled = false
+      isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      signingConfig = signingConfigs.getByName("release")
+      // Falls back to debug signing for local/dev builds where release secrets aren't present.
+      // A real Play Store release MUST run in an environment (CI) that supplies the KEYSTORE_*
+      // env vars above; otherwise this intentionally produces a debug-signed (non-uploadable) build.
+      signingConfig = if (hasReleaseSigningEnv) {
+        signingConfigs.getByName("release")
+      } else {
+        logger.warn(
+          "Release signing env vars (KEYSTORE_PATH/KEYSTORE_PASSWORD/KEY_ALIAS/KEY_PASSWORD) are not " +
+            "set - falling back to debug signing. This build CANNOT be uploaded to Play Store."
+        )
+        signingConfigs.getByName("debugConfig")
+      }
     }
     debug { signingConfig = signingConfigs.getByName("debugConfig") }
   }
@@ -67,6 +96,9 @@ secrets {
   defaultPropertiesFileName = ".env.example"
 }
 
+// WARN (not ERROR) so local/dev builds work without a google-services.json. This means Crashlytics
+// silently becomes a no-op if the file is absent - CI's release workflow supplies a real
+// google-services.json from a secret specifically so production builds do report crashes.
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
 
 // Some unused dependencies are commented out below instead of being removed.
@@ -99,9 +131,19 @@ dependencies {
   // implementation(libs.androidx.navigation.compose)
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.room.runtime)
+  // SQLCipher-backed encrypted Room database (see com.example.data.FinoraDatabase and
+  // com.example.security.DatabasePassphraseProvider).
+  implementation(libs.sqlcipher.android)
+  implementation(libs.androidx.sqlite)
+  implementation(libs.androidx.security.crypto)
   implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
-  implementation(libs.firebase.ai)
+  // Crashlytics: the only Firebase product actually used by the app, for production crash/error
+  // reporting (see com.example.logging.CrashReporter). firebase-ai and firebase-appcheck-recaptcha
+  // were declared but never referenced anywhere in the codebase, so they were removed as dead
+  // weight rather than kept "in case" - re-add them if a feature actually needs them.
+  implementation(libs.firebase.crashlytics)
+  implementation(libs.firebase.analytics)
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 
@@ -111,7 +153,6 @@ dependencies {
   // implementation(libs.androidx.credentials)
   // implementation(libs.androidx.credentials.play.services)
   // implementation(libs.googleid)
-  implementation(libs.firebase.appcheck.recaptcha)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.logging.interceptor)

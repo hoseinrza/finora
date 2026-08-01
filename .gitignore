@@ -15,4 +15,19 @@
 .cxx
 local.properties
 .env
+.env.*
+!.env.example
 debug.keystore
+
+# Signing material - a production keystore or its credentials must never be committed,
+# regardless of filename. Release signing is sourced from env vars only (see app/build.gradle.kts).
+*.jks
+*.keystore
+*.p12
+*.pepk
+keystore.properties
+key.properties
+
+# Firebase config is developer/CI-specific and may be considered sensitive; injected by CI from
+# a secret (see docs/CI_CD_SETUP.md), not committed.
+app/google-services.json

@@ -8,9 +8,11 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.example.R
+import com.example.logging.CrashReporter
 
 object NotificationHelper {
 
+    private const val TAG = "NotificationHelper"
     private const val CHANNEL_ID = "finora_bank_channel"
     private const val CHANNEL_NAME = "اعلان‌های بانکی و تراکنش‌ها"
 
@@ -32,10 +34,14 @@ object NotificationHelper {
     fun showNotification(context: Context, title: String, message: String, id: Int = System.currentTimeMillis().toInt()) {
         createNotificationChannel(context)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                // Permission not granted, but channel created
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // Without POST_NOTIFICATIONS, manager.notify() below throws SecurityException on API 33+.
+            // The transaction itself is still saved to Room regardless of this notification;
+            // this only skips the status-bar banner.
+            CrashReporter.logWarning(TAG, "Skipping notification '$title': POST_NOTIFICATIONS not granted")
+            return
         }
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
@@ -50,7 +56,7 @@ object NotificationHelper {
         try {
             manager.notify(id, builder.build())
         } catch (e: Exception) {
-            e.printStackTrace()
+            CrashReporter.logError(TAG, "Failed to post notification '$title'", e)
         }
     }
 }
