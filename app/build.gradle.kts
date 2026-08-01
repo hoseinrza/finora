@@ -40,6 +40,13 @@ android {
     !releaseKeyAlias.isNullOrBlank() &&
     !releaseKeyPassword.isNullOrBlank()
 
+  // Debug signing is intentionally NOT overridden here: AGP's built-in "debug" signingConfig
+  // auto-generates and reuses a keystore at ~/.android/debug.keystore with well-known credentials
+  // the first time it's needed, on every machine, with zero setup. An earlier version of this
+  // config pointed debug signing at a project-local "${rootDir}/debug.keystore" file - which is
+  // (correctly) gitignored, so it never exists on a fresh checkout, and AGP does NOT auto-generate
+  // a keystore at a custom path - only at its own default location. That mismatch broke every
+  // fresh clone's debug build (validateSigningDebug: "Keystore file ... not found").
   signingConfigs {
     if (hasReleaseSigningEnv) {
       create("release") {
@@ -49,12 +56,6 @@ android {
         keyPassword = releaseKeyPassword
       }
     }
-    create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
-    }
   }
 
   buildTypes {
@@ -62,9 +63,10 @@ android {
       isMinifyEnabled = true
       isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      // Falls back to debug signing for local/dev builds where release secrets aren't present.
-      // A real Play Store release MUST run in an environment (CI) that supplies the KEYSTORE_*
-      // env vars above; otherwise this intentionally produces a debug-signed (non-uploadable) build.
+      // Falls back to the automatic debug signing config for local/dev builds where release
+      // secrets aren't present. A real Play Store release MUST run in an environment (CI) that
+      // supplies the KEYSTORE_* env vars above; otherwise this intentionally produces a
+      // debug-signed (non-uploadable) build.
       signingConfig = if (hasReleaseSigningEnv) {
         signingConfigs.getByName("release")
       } else {
@@ -72,10 +74,9 @@ android {
           "Release signing env vars (KEYSTORE_PATH/KEYSTORE_PASSWORD/KEY_ALIAS/KEY_PASSWORD) are not " +
             "set - falling back to debug signing. This build CANNOT be uploaded to Play Store."
         )
-        signingConfigs.getByName("debugConfig")
+        signingConfigs.getByName("debug")
       }
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11

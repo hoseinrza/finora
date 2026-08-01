@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.ui.theme.NavyPrimary
+import com.example.ui.theme.NavyPrimaryLight
 
 @Composable
 fun FinoraGlassCard(
@@ -42,7 +44,7 @@ fun FinoraGlassCard(
 @Composable
 fun FinoraGradientHeroCard(
     modifier: Modifier = Modifier,
-    gradientColors: List<Color> = listOf(com.example.ui.theme.NavyPrimary, com.example.ui.theme.NavyPrimaryLight),
+    gradientColors: List<Color> = listOf(NavyPrimary, NavyPrimaryLight),
     cornerRadius: Dp = 20.dp,
     content: @Composable BoxScope.() -> Unit
 ) {
