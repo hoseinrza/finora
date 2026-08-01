@@ -1,11 +1,17 @@
 package com.example.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.core.content.ContextCompat
 import com.example.data.SavingGoalEntity
 import com.example.ui.components.*
 import com.example.ui.screens.*
@@ -13,8 +19,24 @@ import com.example.ui.theme.FinoraTheme
 
 @Composable
 fun FinoraApp(viewModel: FinoraViewModel) {
+    val context = LocalContext.current
     val isDarkTheme by viewModel.isDarkTheme.collectAsState()
     val currentTab by viewModel.currentTab.collectAsState()
+    val isSyncingSms by viewModel.isSyncingSms.collectAsState()
+
+    val readSmsPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted -> if (isGranted) viewModel.syncSmsTransactions() }
+
+    val onSyncSmsClick: () -> Unit = {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            viewModel.syncSmsTransactions()
+        } else {
+            readSmsPermissionLauncher.launch(Manifest.permission.READ_SMS)
+        }
+    }
 
     val groupedFilteredTransactions by viewModel.groupedFilteredTransactions.collectAsState()
     val filteredTransactions by viewModel.filteredTransactions.collectAsState()
@@ -50,8 +72,10 @@ fun FinoraApp(viewModel: FinoraViewModel) {
                         currentTab = currentTab,
                         unreadNotificationCount = allNotifications.count { !it.isRead },
                         isDarkTheme = isDarkTheme,
+                        isSyncingSms = isSyncingSms,
                         onToggleDarkTheme = { viewModel.toggleDarkTheme() },
-                        onNotificationClick = { viewModel.setTab(AppNavTab.NOTIFICATIONS) }
+                        onNotificationClick = { viewModel.setTab(AppNavTab.NOTIFICATIONS) },
+                        onSyncSmsClick = onSyncSmsClick
                     )
                 },
                 bottomBar = {

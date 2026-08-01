@@ -20,6 +20,8 @@ sealed interface PermissionUiState {
 fun explanationFor(permission: String): String = when (permission) {
     android.Manifest.permission.RECEIVE_SMS ->
         "Finora از پیامک‌های بانکی برای ثبت خودکار تراکنش‌ها استفاده می‌کند. بدون این دسترسی باید تراکنش‌ها را دستی وارد کنید."
+    android.Manifest.permission.READ_SMS ->
+        "Finora برای همگام‌سازی تراکنش‌ها از پیامک‌های بانکی اخیر شما به این دسترسی نیاز دارد."
     android.Manifest.permission.POST_NOTIFICATIONS ->
         "Finora با این دسترسی می‌تواند هنگام ثبت خودکار یک تراکنش به شما اطلاع دهد."
     else -> "این دسترسی برای عملکرد صحیح برنامه لازم است."

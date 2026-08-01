@@ -6,12 +6,13 @@
       Permissions:
       RECEIVE_SMS       - required: BankSmsReceiver reads the incoming SMS broadcast extras
                            (Telephony.Sms.Intents.getMessagesFromIntent) to detect bank transaction texts.
-                           READ_SMS is intentionally NOT requested - the app never queries the SMS
-                           inbox/content provider, only the broadcast payload, so declaring READ_SMS
-                           would be an unused, over-broad permission under Play Console's SMS/Call Log policy.
+      READ_SMS          - required: the manual "sync" action queries the SMS inbox content provider
+                           (Telephony.Sms.CONTENT_URI) to pull in recent bank messages on demand,
+                           not just ones received while the app is running.
       POST_NOTIFICATIONS - required on API 33+ to show the transaction-detected system notification.
     -->
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application

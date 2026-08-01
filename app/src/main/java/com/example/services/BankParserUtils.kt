@@ -1,6 +1,7 @@
 package com.example.services
 
 import android.content.Context
+import android.provider.Telephony
 import com.example.data.FinoraDatabase
 import com.example.data.NotificationEntity
 import com.example.data.PaymentMethod
@@ -10,6 +11,10 @@ import com.example.data.TransactionType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.regex.Pattern
 
 data class ParsedTransaction(
@@ -158,5 +163,70 @@ object BankParserUtils {
                 message = "مبلغ ${java.text.DecimalFormat("#,###").format(parsed.amount)} تومان ثبت شد"
             )
         }
+    }
+
+    /**
+     * Reads recent SMS from the device inbox (requires READ_SMS) and inserts any bank
+     * transactions found. Dedups against transactions already inserted from a previous sync by
+     * checking the same description key, since re-running this against the same inbox window
+     * would otherwise re-insert the same messages every time.
+     *
+     * @return the number of new transactions inserted.
+     */
+    suspend fun syncRecentSms(context: Context, daysBack: Int = 30): Int = withContext(Dispatchers.IO) {
+        val db = FinoraDatabase.getDatabase(context)
+        val sinceMillis = System.currentTimeMillis() - daysBack * 24 * 3600 * 1000L
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+
+        var insertedCount = 0
+        val projection = arrayOf(Telephony.Sms.BODY, Telephony.Sms.DATE)
+
+        context.contentResolver.query(
+            Telephony.Sms.CONTENT_URI,
+            projection,
+            "${Telephony.Sms.DATE} >= ?",
+            arrayOf(sinceMillis.toString()),
+            "${Telephony.Sms.DATE} DESC"
+        )?.use { cursor ->
+            val bodyIndex = cursor.getColumnIndexOrThrow(Telephony.Sms.BODY)
+            val dateIndex = cursor.getColumnIndexOrThrow(Telephony.Sms.DATE)
+
+            while (cursor.moveToNext()) {
+                val body = cursor.getString(bodyIndex) ?: continue
+                val smsDate = cursor.getLong(dateIndex)
+                val parsed = parseText(body) ?: continue
+
+                val description =
+                    "ثبت خودکار از پیامک (${dateFormat.format(Date(smsDate))})\nمتن: ${parsed.rawText.take(100)}"
+                if (db.transactionDao().existsByDescription(description)) continue
+
+                db.transactionDao().insertTransaction(
+                    TransactionEntity(
+                        title = parsed.title,
+                        amount = parsed.amount,
+                        type = parsed.type,
+                        category = parsed.category,
+                        paymentMethod = PaymentMethod.BANK_CARD,
+                        accountName = parsed.bankName,
+                        date = smsDate,
+                        description = description
+                    )
+                )
+                insertedCount++
+            }
+        }
+
+        if (insertedCount > 0) {
+            db.notificationDao().insertNotification(
+                NotificationEntity(
+                    title = "همگام‌سازی پیامک‌ها",
+                    message = "$insertedCount تراکنش جدید از پیامک‌های اخیر شما ثبت شد.",
+                    date = System.currentTimeMillis(),
+                    type = "MILESTONE"
+                )
+            )
+        }
+
+        insertedCount
     }
 }

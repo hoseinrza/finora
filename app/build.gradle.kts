@@ -132,11 +132,6 @@ dependencies {
   // implementation(libs.androidx.navigation.compose)
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.room.runtime)
-  // SQLCipher-backed encrypted Room database (see com.example.data.FinoraDatabase and
-  // com.example.security.DatabasePassphraseProvider).
-  implementation(libs.sqlcipher.android)
-  implementation(libs.androidx.sqlite)
-  implementation(libs.androidx.security.crypto)
   implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   // Crashlytics: the only Firebase product actually used by the app, for production crash/error

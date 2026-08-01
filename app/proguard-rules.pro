@@ -15,9 +15,8 @@
 # ---------------------------------------------------------------------------
 # Room's generated DAO/database implementations are produced at compile time by KSP (not via
 # runtime reflection), so R8 renaming class members is normally safe - the generated code and
-# the entities are renamed consistently together. Entities are still kept defensively since they
-# also cross the SQLCipher/EncryptedSharedPreferences boundary and to protect against any future
-# reflection-based use (e.g. if a debugging/export tool is added later).
+# the entities are renamed consistently together. Entities are still kept defensively to protect
+# against any future reflection-based use (e.g. if a debugging/export tool is added later).
 -keep class com.example.data.*Entity { *; }
 -keep @androidx.room.Database class * { *; }
 -keep @androidx.room.Entity class * { *; }
@@ -76,12 +75,6 @@
 -keepclassmembers class kotlin.coroutines.Continuation
 -dontwarn kotlinx.coroutines.**
 -dontwarn kotlin.reflect.**
-
-# ---------------------------------------------------------------------------
-# SQLCipher (JNI-backed; its own classes are referenced from native code)
-# ---------------------------------------------------------------------------
--keep class net.sqlcipher.** { *; }
--dontwarn net.sqlcipher.**
 
 # ---------------------------------------------------------------------------
 # Firebase / Crashlytics

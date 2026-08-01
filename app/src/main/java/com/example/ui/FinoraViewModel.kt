@@ -93,6 +93,10 @@ class FinoraViewModel(application: Application) : AndroidViewModel(application) 
     val allNotifications: StateFlow<List<NotificationEntity>> = repository.allNotifications
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // SMS Sync State
+    private val _isSyncingSms = MutableStateFlow(false)
+    val isSyncingSms: StateFlow<Boolean> = _isSyncingSms.asStateFlow()
+
     // Financial Metrics
     val totalIncome: StateFlow<Long> = allTransactions.map { list ->
         list.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
@@ -304,6 +308,18 @@ class FinoraViewModel(application: Application) : AndroidViewModel(application) 
                 rawText,
                 "پیامک زنده (شبیه‌ساز)"
             )
+        }
+    }
+
+    fun syncSmsTransactions() {
+        if (_isSyncingSms.value) return
+        viewModelScope.launch {
+            _isSyncingSms.value = true
+            try {
+                com.example.services.BankParserUtils.syncRecentSms(getApplication())
+            } finally {
+                _isSyncingSms.value = false
+            }
         }
     }
 

@@ -29,8 +29,10 @@ fun FinoraTopBar(
     currentTab: AppNavTab,
     unreadNotificationCount: Int = 0,
     isDarkTheme: Boolean = false,
+    isSyncingSms: Boolean = false,
     onToggleDarkTheme: () -> Unit = {},
-    onNotificationClick: () -> Unit = {}
+    onNotificationClick: () -> Unit = {},
+    onSyncSmsClick: () -> Unit = {}
 ) {
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
@@ -70,6 +72,23 @@ fun FinoraTopBar(
             }
         },
         actions = {
+            // Sync Recent SMS Button
+            IconButton(onClick = onSyncSmsClick, enabled = !isSyncingSms) {
+                if (isSyncingSms) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = EmeraldGreen
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Sync,
+                        contentDescription = "همگام‌سازی از پیامک‌ها",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
             // Theme Toggle Button
             IconButton(onClick = onToggleDarkTheme) {
                 Icon(

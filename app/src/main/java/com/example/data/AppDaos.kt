@@ -22,6 +22,9 @@ interface TransactionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransaction(transaction: TransactionEntity): Long
 
+    @Query("SELECT EXISTS(SELECT 1 FROM transactions WHERE description = :description)")
+    suspend fun existsByDescription(description: String): Boolean
+
     @Delete
     suspend fun deleteTransaction(transaction: TransactionEntity)
 
