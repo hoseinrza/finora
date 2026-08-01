@@ -1,10 +1,5 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -136,8 +131,8 @@ private fun iconFor(tab: AppNavTab): ImageVector = when (tab) {
 }
 
 /**
- * Floating pill-shaped bottom navigation. Only the selected tab shows its label,
- * expanding out of a rounded highlight next to the icon; the rest are icon-only.
+ * Floating pill-shaped bottom navigation. Icon-only - no text labels under any tab; the
+ * selected tab is distinguished by a soft rounded highlight and tint color alone.
  */
 @Composable
 fun FinoraBottomBar(
@@ -183,40 +178,23 @@ private fun FinoraBottomBarItem(
     val interactionSource = remember { MutableInteractionSource() }
     val contentColor = if (isSelected) EmeraldGreen else MaterialTheme.colorScheme.onSurfaceVariant
 
-    Row(
+    Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(18.dp))
+            .size(48.dp)
+            .clip(RoundedCornerShape(16.dp))
             .background(if (isSelected) EmeraldGreen.copy(alpha = 0.14f) else Color.Transparent)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick
-            )
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            ),
+        contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = iconFor(tab),
             contentDescription = tab.titleFa,
             tint = contentColor,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(24.dp)
         )
-
-        AnimatedVisibility(
-            visible = isSelected,
-            enter = fadeIn() + expandHorizontally(),
-            exit = fadeOut() + shrinkHorizontally()
-        ) {
-            Row {
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = tab.titleFa,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = contentColor,
-                    maxLines = 1
-                )
-            }
-        }
     }
 }
