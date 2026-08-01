@@ -56,7 +56,11 @@ data class TransactionEntity(
     val date: Long = System.currentTimeMillis(),
     val description: String? = null,
     val isRecurring: Boolean = false,
-    val tag: String? = null
+    val tag: String? = null,
+    // Account balance as reported by the source bank SMS right after this transaction, when
+    // parsed. Used (together with amount/type/date) to detect the same SMS being processed twice
+    // (e.g. once live via BankSmsReceiver, once via a manual sync over the same time window).
+    val balanceAfter: Long? = null
 )
 
 /**
@@ -110,7 +114,10 @@ data class AccountEntity(
     val balance: Long,
     val accountNumber: String? = null,
     val currency: String = "تومان",
-    val colorHex: String = "#0F172A"
+    val colorHex: String = "#0F172A",
+    // Timestamp (from the source SMS, not insert time) of the last balance figure applied to
+    // this account, so out-of-order SMS processing never overwrites a newer known balance.
+    val balanceUpdatedAt: Long? = null
 )
 
 /**

@@ -22,8 +22,8 @@ interface TransactionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransaction(transaction: TransactionEntity): Long
 
-    @Query("SELECT EXISTS(SELECT 1 FROM transactions WHERE description = :description)")
-    suspend fun existsByDescription(description: String): Boolean
+    @Query("SELECT * FROM transactions WHERE amount = :amount AND type = :type AND date BETWEEN :from AND :to")
+    suspend fun findSimilar(amount: Long, type: TransactionType, from: Long, to: Long): List<TransactionEntity>
 
     @Delete
     suspend fun deleteTransaction(transaction: TransactionEntity)
@@ -66,6 +66,9 @@ interface SavingGoalDao {
 interface AccountDao {
     @Query("SELECT * FROM accounts")
     fun getAllAccounts(): Flow<List<AccountEntity>>
+
+    @Query("SELECT * FROM accounts WHERE name = :name LIMIT 1")
+    suspend fun findByName(name: String): AccountEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAccount(account: AccountEntity): Long
